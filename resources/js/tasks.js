@@ -19,13 +19,38 @@ function init() {
     const form = qs('#createForm');
     const input = qs('#taskName');
     const list = qs('#tasksList');
+    const projectSelect = qs('#filterProject');
+    const createProjectBtn = qs('#createProjectBtn');
 
     form?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!input.value.trim()) return;
-        await postJson('/tasks', { name: input.value.trim() });
-        // simple refresh to show created task with server-provided priority
-        window.location.reload();
+        const projectId = projectSelect?.value || null;
+        await postJson('/tasks', { name: input.value.trim(), project_id: projectId });
+        // refresh to show created task with server-provided priority and selected project
+        if (projectId) {
+            window.location.href = '?project=' + projectId;
+        } else {
+            window.location.reload();
+        }
+    });
+
+    // Create project flow (prompt-based)
+    createProjectBtn?.addEventListener('click', async (e) => {
+        const name = prompt('New project name');
+        if (!name || !name.trim()) return;
+        try {
+            const project = await postJson('/projects', { name: name.trim() });
+            if (project && project.id) {
+                // redirect to the new project's view
+                window.location.href = '?project=' + project.id;
+            } else {
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error('Create project failed', err);
+            window.location.reload();
+        }
     });
 
     // Edit / Delete buttons

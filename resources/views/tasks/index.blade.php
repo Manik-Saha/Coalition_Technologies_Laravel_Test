@@ -20,6 +20,21 @@
 
         <section class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
             <form id="createForm" class="flex gap-3 items-center">
+                <div class="w-48 flex items-center gap-2">
+                    <label for="filterProject" class="sr-only">Project</label>
+                    <select id="filterProject" class="flex-1 block rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none" onchange="(function(v){ if(v) window.location.href='?project='+v }(this.value))">
+                        <option value="">Select project</option>
+                        @foreach($projects ?? collect() as $project)
+                            <option value="{{ $project->id }}" @if(isset($selectedProject) && $selectedProject == $project->id) selected @endif>{{ $project->name }}</option>
+                        @endforeach
+                    </select>
+
+                    <button id="createProjectBtn" type="button" title="Create project" class="inline-flex items-center justify-center p-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/></svg>
+                        <span class="sr-only">Create project</span>
+                    </button>
+                </div>
+
                 <div class="flex-1">
                     <label for="taskName" class="sr-only">Task name</label>
                     <input id="taskName" name="name" type="text" required placeholder="Describe the task..." class="block w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -33,7 +48,7 @@
             </form>
 
             <div class="mt-6">
-                <ul id="tasksList" class="space-y-3">
+                <ul id="tasksList" class="space-y-3" data-project="{{ $selectedProject ?? '' }}">
                     @foreach($tasks as $task)
                         <li class="task flex items-center gap-3 p-3 rounded-md bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 shadow-sm" draggable="true" data-id="{{ $task->id }}">
                             <div class="flex items-center gap-3 w-full">

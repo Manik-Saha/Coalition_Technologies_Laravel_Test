@@ -8,29 +8,52 @@ use Illuminate\Support\Facades\DB;
 
 class TaskController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tasks = Task::get();
-        return view('tasks.index', compact('tasks'));
+        $projects = \App\Models\Project::orderBy('name')->get();
+        $selectedProject = $request->query('project');
+
+        if (!$selectedProject && $projects->isNotEmpty()) {
+            $selectedProject = $projects->first()->id;
+        }
+
+        if ($selectedProject) {
+            $tasks = Task::where('project_id', $selectedProject)->get();
+        } else {
+            $tasks = collect();
+        }
+
+        return view('tasks.index', compact('tasks', 'projects', 'selectedProject'));
     }
 
     public function store(Request $request)
     {
-        $request->validate(["name" => 'required|string|max:255']);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'project_id' => 'nullable|exists:projects,id',
+        ]);
 
-        $max = Task::max('priority');
+        $projectId = $request->input('project_id');
+
+        // determine max priority within the project (or globally if no project)
+        $maxQuery = Task::when($projectId, function ($q) use ($projectId) {
+            $q->where('project_id', $projectId);
+        });
+
+        $max = $maxQuery->max('priority');
         $priority = $max ? $max + 1 : 1;
 
         $task = Task::create([
             'name' => $request->input('name'),
             'priority' => $priority,
+            'project_id' => $projectId,
         ]);
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json($task, 201);
         }
 
-        return redirect()->route('tasks.index');
+        return redirect()->route('tasks.index', ['project' => $projectId]);
     }
 
     public function update(Request $request, Task $task)
@@ -48,10 +71,14 @@ class TaskController extends Controller
     public function destroy(Request $request, Task $task)
     {
         DB::transaction(function () use ($task) {
+            $projectId = $task->project_id;
             $task->delete();
 
-            // Re-normalize priorities so they remain consecutive starting at 1
-            $rows = Task::orderBy('priority')->get();
+            // Re-normalize priorities within the same project so they remain consecutive starting at 1
+            $rows = Task::when($projectId, function ($q) use ($projectId) {
+                $q->where('project_id', $projectId);
+            })->orderBy('priority')->get();
+
             $i = 1;
             foreach ($rows as $r) {
                 if ($r->priority !== $i) {

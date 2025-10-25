@@ -12,6 +12,7 @@ class Task extends Model
     protected $fillable = [
         'name',
         'priority',
+        'project_id',
     ];
 
     /**
@@ -22,5 +23,10 @@ class Task extends Model
         static::addGlobalScope('priority', function ($query) {
             $query->orderBy('priority');
         });
+    }
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
     }
 }
